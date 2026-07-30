@@ -12,7 +12,7 @@ class Model(nn.Module):
         self.pred_len = getattr(configs, 'pred_len', 96)
         self.channels = getattr(configs, 'enc_in', 321)
         
-        hidden_dim = getattr(configs, 'hidden_dim', 32) # Reduced to 32 for MPS stability
+        hidden_dim = getattr(configs, 'hidden_dim', 32) 
         num_layers = getattr(configs, 'num_layers', 1)
         
         # RevIN Normalization Parameters
@@ -27,8 +27,7 @@ class Model(nn.Module):
             batch_first=True
         )
         
-        # 3. Channel-Independent Linear Projection: maps (L * hidden_dim) -> H per channel
-        # Size: (seq_len * hidden_dim) -> pred_len (ONLY ~300k parameters instead of 189M!)
+        # Channel-Independent Linear Projection: maps (L * hidden_dim) -> H per channel
         self.temporal_fc = nn.Linear(self.seq_len * hidden_dim, self.pred_len)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

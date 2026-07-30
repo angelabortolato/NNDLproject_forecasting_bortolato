@@ -4,8 +4,7 @@ import numpy as np
 import torch
 import gzip
 import pandas as pd
-
-
+from scipy import stats
 
 def visualize_raw_datasets(data_dir: str = "./data", save_dir: str = "./plots"):
     """
@@ -23,32 +22,22 @@ def visualize_raw_datasets(data_dir: str = "./data", save_dir: str = "./plots"):
 
         print(f"--> Electricity raw shape (Time Steps x Channels): {df_elec.shape}")
 
-        fig, axes = plt.subplots(2, 1, figsize=(14, 7))
+        fig, axes = plt.subplots(1, 1, figsize=(6, 4))
 
-        # Full time horizon
-        axes[0].plot(df_elec.iloc[:, 0], label="Client 0", alpha=0.8, linewidth=0.8)
-        axes[0].plot(df_elec.iloc[:, 1], label="Client 1", alpha=0.8, linewidth=0.8)
-        axes[0].plot(df_elec.iloc[:, 2], label="Client 2", alpha=0.8, linewidth=0.8)
-        axes[0].set_title("Electricity Dataset - Full Time Horizon (~26,000 Hourly Steps)", fontsize=12, fontweight='bold')
-        axes[0].set_xlabel("Time Step (Hours)")
-        axes[0].set_ylabel("Electricity Load (kWh)")
-        axes[0].grid(True, alpha=0.3)
-        axes[0].legend(loc="upper right")
-
-        # Zoomed-in window (2 weeks = 336 hours)
-        zoomed_hours = 336
-        axes[1].plot(df_elec.iloc[:zoomed_hours, 0], label="Client 0", color="tab:blue", linewidth=1.8)
-        axes[1].plot(df_elec.iloc[:zoomed_hours, 1], label="Client 1", color="tab:orange", linewidth=1.8)
+        # Zoomed-in window (1 week = 168 hours)
+        zoomed_hours = 168
+        axes.plot(df_elec.iloc[:zoomed_hours, 0], label="Client 0", color="tab:blue", linewidth=1.8)
+        axes.plot(df_elec.iloc[:zoomed_hours, 1], label="Client 1", color="tab:orange", linewidth=1.8)
 
         # Highlight 24-hour daily periodicity lines
-        for day in range(1, 14):
-            axes[1].axvline(x=day * 24, color='gray', linestyle='--', alpha=0.5)
+        for day in range(1, 7):
+            axes.axvline(x=day * 24, color='gray', linestyle='--', alpha=0.5)
 
-        axes[1].set_title("Electricity Dataset - Zoomed-In View (14 Days / 336 Hours) Showing Clear 24-Hour Periodicity", fontsize=12, fontweight='bold')
-        axes[1].set_xlabel("Time Step (Hours)")
-        axes[1].set_ylabel("Electricity Load (kWh)")
-        axes[1].grid(True, alpha=0.3)
-        axes[1].legend(loc="upper right")
+        #axes[0].set_title("Electricity Dataset - 7 Days View showing 24-Hour periodicity", fontsize=12, fontweight='bold')
+        axes.set_xlabel("Time Step (Hours)")
+        axes.set_ylabel("Electricity Load (kWh)")
+        axes.grid(True, alpha=0.3)
+        axes.legend(loc="upper right")
 
         plt.tight_layout()
         elec_save_path = os.path.join(save_dir, "raw_electricity_visualization.png")
@@ -67,11 +56,11 @@ def visualize_raw_datasets(data_dir: str = "./data", save_dir: str = "./plots"):
 
         print(f"--> Exchange Rate raw shape (Time Steps x Channels): {df_exch.shape}")
 
-        plt.figure(figsize=(14, 5))
+        plt.figure(figsize=(6, 4))
         for c in range(min(5, df_exch.shape[1])):
             plt.plot(df_exch.iloc[:, c], label=f"Currency Pair {c}", linewidth=1.2)
 
-        plt.title("Financial Exchange Rate Dataset - Full Time Horizon (~7,500 Daily Steps)", fontsize=12, fontweight='bold')
+        #plt.title("Financial Exchange Rate Dataset - Full Time Horizon", fontsize=12, fontweight='bold')
         plt.xlabel("Time Step (Days)")
         plt.ylabel("Exchange Rate Value")
         plt.grid(True, alpha=0.3)
@@ -95,12 +84,12 @@ MODEL_COLORS = {
 }
 
 
-def plot_loss_trajectories(all_results, save_path="./plots/loss_trajectories.png"):
+def plot_loss_trajectories(all_results, dataset_name="Electricity", save_path="./plots/loss_trajectories.png"):
     """
     Plots all models' training (solid) and validation (dashed) curves on a single panel.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(6, 4))
     
     
     for (model_name, res) in all_results.items():
@@ -114,11 +103,11 @@ def plot_loss_trajectories(all_results, save_path="./plots/loss_trajectories.png
         plt.plot(epochs, res["val_losses"], label=f"{model_name} (Val)", 
                  color=color, linestyle="--", linewidth=2)
 
-    plt.title("Training vs. Validation Loss Trajectories Across Models", fontsize=13, fontweight='bold')
+    #plt.title(f"{dataset_name} Dataset - Training and Validation Loss",fontsize=13,fontweight="bold",)    
     plt.xlabel("Epoch")
     plt.ylabel("MSE Loss")
     plt.grid(True, alpha=0.3)
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.legend(loc="upper right", fontsize=8)    
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.show()
@@ -126,7 +115,7 @@ def plot_loss_trajectories(all_results, save_path="./plots/loss_trajectories.png
 
 
 def plot_forecast_comparison(models_dict, test_loader, device, sample_idx=0, channel_idx=0, 
-                             seq_len=96, pred_len=96, save_path="./plots/forecast_comparison.png"):
+                             seq_len=96, pred_len=96, dataset_name="Electricity", save_path="./plots/forecast_comparison.png"):
     """
     Generates a multi-model comparative forecast plot against ground truth observations.
     """
@@ -144,7 +133,7 @@ def plot_forecast_comparison(models_dict, test_loader, device, sample_idx=0, cha
     time_lookback = np.arange(seq_len)
     time_horizon = np.arange(seq_len, seq_len + pred_len)
 
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(6, 4))
     
     # Plot historical lookback and actual target sequence
     plt.plot(time_lookback, lookback, color='black', label='Historical Lookback (L=96)', linewidth=1.5)
@@ -159,23 +148,16 @@ def plot_forecast_comparison(models_dict, test_loader, device, sample_idx=0, cha
             plt.plot(time_horizon, pred, label=f'{name} Forecast', color=color, linewidth=1.8, linestyle='--')
 
     plt.axvline(x=seq_len, color='gray', linestyle='--', alpha=0.7, label='Forecast Boundary')
-    plt.title(f"Visual Forecast Comparison (Channel {channel_idx})", fontsize=13, fontweight='bold')
+    #plt.title(f"{dataset_name} Dataset - Visual Forecast Comparison", fontsize=13, fontweight='bold')
     plt.xlabel("Time Steps")
     plt.ylabel("Normalized Value")
-    plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left')
+    plt.legend(fontsize=8)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     
     plt.savefig(save_path, dpi=300)
     plt.show()
     print(f"--> Forecast visual plot saved to {save_path}")
-
-import os
-import torch
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from scipy import stats
 
 def compute_model_residuals(model, test_loader, device, pred_len=96):
     """
@@ -205,7 +187,7 @@ def compute_model_residuals(model, test_loader, device, pred_len=96):
 
 
 def plot_residual_diagnostics(models_dict, test_loader, device, 
-                                         channel_idx=0, pred_len=96, 
+                                         channel_idx=0, pred_len=96, dataset_name="Electricity",
                                          save_path="./plots/residual_diagnostics_comparison.png"):
     """
     Plots the 2 most critical residual diagnostics for ALL models in models_dict:
@@ -222,7 +204,9 @@ def plot_residual_diagnostics(models_dict, test_loader, device,
         "TimesNet": "tab:red"
     }
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    #fig, ax1 = plt.subplots(1, 1, figsize=(6, 4))
+
     
     # Collect data for all models
     for name, model in models_dict.items():
@@ -258,20 +242,20 @@ def plot_residual_diagnostics(models_dict, test_loader, device,
 
     # --- Formatting Panel 1 ---
     ax1.axvline(0, color='gray', linestyle='--', alpha=0.7, label='Zero Bias Reference')
-    ax1.set_title("1. Residual Density & Bias Distribution", fontsize=12, fontweight='bold')
+    #ax1.set_title("Residual Density & Bias Distribution", fontsize=12, fontweight='bold')
     ax1.set_xlabel("Residual Error (y - ŷ)")
     ax1.set_ylabel("Density")
     ax1.grid(True, alpha=0.3)
     ax1.legend(loc='upper left', fontsize=9)
 
     # --- Formatting Panel 2 ---
-    ax2.set_title("2. Error Horizon Drift (MAE per Time Step)", fontsize=12, fontweight='bold')
+    #ax2.set_title("2. Error Horizon Drift (MAE per Time Step)", fontsize=12, fontweight='bold')
     ax2.set_xlabel("Forecast Step Horizon (t)")
     ax2.set_ylabel("Mean Absolute Residual (|y - ŷ|)")
     ax2.grid(True, alpha=0.3)
     ax2.legend(loc='upper left', fontsize=9)
-
-    plt.suptitle(f"Multi-Model Residuals Comparison (Channel {channel_idx})", fontsize=14, fontweight='bold')
+    
+    plt.suptitle(f"{dataset_name} Dataset - Residuals Comparison", fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.show()
@@ -291,7 +275,7 @@ def summarize_and_plot_experiment(results_dict,
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
-    # 1. Build Summary Table
+    # Build Summary Table
     summary_data = []
     for key, res in results_dict.items():
         summary_data.append({
@@ -316,14 +300,14 @@ def summarize_and_plot_experiment(results_dict,
         
     print("==================================================\n")
 
-    # 2. Plotting Logic
+    #  Plotting Logic
     if plot_type == "line":
         # Dual-axis line plot for numerical sweeps (Horizon, Top-k)
         keys_list = list(results_dict.keys())
         test_mses = [results_dict[k]['test_mse'] for k in keys_list]
         test_maes = [results_dict[k]['test_mae'] for k in keys_list]
         
-        fig, ax1 = plt.subplots(figsize=(8, 5))
+        fig, ax1 = plt.subplots(figsize=(6, 4))
         
         color = 'tab:red'
         ax1.set_xlabel(xlabel, fontsize=11, fontweight='bold')
@@ -348,7 +332,7 @@ def summarize_and_plot_experiment(results_dict,
         
     elif plot_type == "trajectories":
         # Side-by-side loss curves for categorical comparisons (RevIN On vs Off)
-        fig, axes = plt.subplots(1, len(results_dict), figsize=(6 * len(results_dict), 5), sharey=True)
+        fig, axes = plt.subplots(1, len(results_dict), figsize=(6 * len(results_dict), 4), sharey=True)
         if len(results_dict) == 1:
             axes = [axes]
             
@@ -385,9 +369,7 @@ def plot_multi_model_horizon_comparison(all_horizon_results,
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
-    # ----------------------------------------------------
-    # 1. Safely Unpack [model_name][H] -> test_mse
-    # ----------------------------------------------------
+    # Safely Unpack [model_name][H] -> test_mse
     normalized_data = {}
     
     for model_name, h_dict in all_horizon_results.items():
@@ -412,9 +394,7 @@ def plot_multi_model_horizon_comparison(all_horizon_results,
             elif isinstance(res, (float, int, np.floating)):
                 normalized_data[model_name][h_int] = float(res)
 
-    # ----------------------------------------------------
-    # 2. Build Summary Table
-    # ----------------------------------------------------
+    #  Build Summary Table
     summary_rows = []
     for H in horizons:
         row = {"Horizon (H)": f"H={H}"}
@@ -432,9 +412,7 @@ def plot_multi_model_horizon_comparison(all_horizon_results,
     print(df_summary.to_string(index=False))
     print("=========================================================================\n")
 
-    # ----------------------------------------------------
-    # 3. Plot Comparison Line Chart
-    # ----------------------------------------------------
+    # Plot Comparison Line Chart
     MODEL_COLORS = {
         "TimesNet": "tab:red",
         "DLinear": "tab:blue",
@@ -442,7 +420,7 @@ def plot_multi_model_horizon_comparison(all_horizon_results,
         "LSTM": "tab:green"
     }
 
-    plt.figure(figsize=(9, 5.5))
+    plt.figure(figsize=(6, 4))
     
     for model_name, h_data in normalized_data.items():
         color = MODEL_COLORS.get(model_name, "tab:gray")
@@ -481,7 +459,7 @@ def extract_and_plot_fft_periods(model, test_loader, device, top_k=5,
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
-    # 1. Grab a test batch
+    #  Grab a test batch
     batch_x, _ = next(iter(test_loader))
     batch_x = batch_x.to(device) # Shape: (B, L, C)
     
@@ -493,20 +471,19 @@ def extract_and_plot_fft_periods(model, test_loader, device, top_k=5,
     else:
         x_norm = batch_x
         
-    # 2. Compute Real FFT across time dimension L
+    #  Compute Real FFT across time dimension L
     # x_ft shape: (B, L//2 + 1, C)
     x_ft = torch.fft.rfft(x_norm, dim=1)
     
     # Average frequency amplitudes across batch (B) and channel (C) dimensions
     amplitudes = torch.abs(x_ft).mean(dim=(0, 2)).cpu().numpy() # Shape: (L//2 + 1,)
     
-    # Frequency indices (0, 1, ..., L//2)
     freq_indices = np.arange(len(amplitudes))
     
     # Zero out DC component (frequency 0 = baseline mean offset)
     amplitudes[0] = 0
     
-    # 3. Find top-k dominant frequency indices
+    #  Find top-k dominant frequency indices
     top_k_indices = np.argsort(amplitudes)[-top_k:][::-1]
     top_k_amplitudes = amplitudes[top_k_indices]
     
@@ -515,9 +492,7 @@ def extract_and_plot_fft_periods(model, test_loader, device, top_k=5,
     period_lengths_steps = [L / idx if idx > 0 else L for idx in top_k_indices]
     period_lengths_hours = [p * sampling_interval_hours for p in period_lengths_steps]
     
-    # ----------------------------------------------------
-    # 4. Print Summary Table of Discovered Periods
-    # ----------------------------------------------------
+    # Print Summary Table of Discovered Periods
     print("\n==================================================")
     print(f"   TIMESNET FFT DOMAIN INTERPRETABILITY (L={L})")
     print("==================================================")
@@ -528,10 +503,8 @@ def extract_and_plot_fft_periods(model, test_loader, device, top_k=5,
         print(f"{rank:<6} | {idx:<12} | {p_step:<16.2f} | {p_hr:<16.2f}h | {amp:<10.4f}")
     print("==================================================\n")
 
-    # ----------------------------------------------------
-    # 5. Visualization: FFT Amplitude Spectrum & Periods
-    # ----------------------------------------------------
-    plt.figure(figsize=(10, 5))
+    # Visualization: FFT Amplitude Spectrum & Periods
+    plt.figure(figsize=(6, 4))
     
     # Full FFT Spectrum Line
     plt.plot(freq_indices[1:], amplitudes[1:], color='tab:blue', linewidth=1.8, label='FFT Amplitude Spectrum')
@@ -539,17 +512,35 @@ def extract_and_plot_fft_periods(model, test_loader, device, top_k=5,
     # Highlight Top-k Frequency Peaks
     plt.scatter(top_k_indices, top_k_amplitudes, color='tab:red', s=70, zorder=5, label=f'Top-{top_k} Selected Periods')
     
-    # Annotate Top Peaks with physical period length
+    offsets = {
+        1: (10, 10),
+        2: (25, 25),
+        3: (25, 5),
+        4: (25, -15),
+        5: (25, 10),
+    }
+
     for idx, p_hr, amp in zip(top_k_indices, period_lengths_hours, top_k_amplitudes):
+        ox, oy = offsets.get(idx, (15, 10))
+
         plt.annotate(
-            f"T={p_hr:.1f}h\n(f={idx})", 
-            xy=(idx, amp), 
-            xytext=(idx + 0.5, amp * 1.05),
-            fontsize=9, fontweight='bold', color='tab:red',
-            arrowprops=dict(arrowstyle="->", color='tab:red', lw=1.0)
-        )
-        
-    plt.title(f"TimesNet FFT Frequency Spectrum & Discovered Periods (Electricity, L={L})", fontsize=12, fontweight='bold')
+            f"T={p_hr:.1f}h",
+            xy=(idx, amp),
+            xytext=(ox, oy),
+            textcoords="offset points",
+            fontsize=9,
+            fontweight="bold",
+            color="tab:red",
+            arrowprops=dict(
+                arrowstyle="->",
+                color="tab:red",
+                lw=1
+            ),
+            ha="left",
+            va="bottom",
+        )    
+            
+    #plt.title(f"TimesNet FFT Frequency Spectrum & Discovered Periods (Electricity, L={L})", fontsize=12, fontweight='bold')
     plt.xlabel("Frequency Index (f)", fontsize=11)
     plt.ylabel("Mean Spectral Amplitude", fontsize=11)
     plt.grid(True, alpha=0.3)
@@ -585,7 +576,7 @@ def plot_parametric_gaussian_forecast(model, test_loader, device, sample_idx=0, 
     time_lookback = np.arange(seq_len)
     time_horizon = np.arange(seq_len, seq_len + pred_len)
 
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(6, 4))
     
     # Ground Truth & History
     plt.plot(time_lookback, lookback, color='black', label='Historical Lookback')
@@ -601,7 +592,7 @@ def plot_parametric_gaussian_forecast(model, test_loader, device, sample_idx=0, 
     plt.fill_between(time_horizon, lower_99, upper_99, color='tab:red', alpha=0.10, label='99% Confidence Region')
 
     plt.axvline(x=seq_len, color='gray', linestyle='--', alpha=0.7)
-    plt.title(f"TimesNet Parametric Gaussian Probabilistic Forecast (Channel {channel_idx})", fontweight='bold')
+    #plt.title(f"TimesNet Parametric Gaussian Probabilistic Forecast (Channel {channel_idx})", fontweight='bold')
     plt.xlabel("Time Steps")
     plt.ylabel("Normalized Value")
     plt.legend(loc='upper left')
@@ -678,26 +669,26 @@ def plot_mc_dropout_forecast(model, test_loader, device, sample_idx=0, channel_i
     time_lookback = np.arange(seq_len)
     time_horizon = np.arange(seq_len, seq_len + pred_len)
 
-    plt.figure(figsize=(12, 5))
+    plt.figure(figsize=(6, 4))
     
-    # 1. Historical Lookback & Ground Truth
+    #  Historical Lookback & Ground Truth
     plt.plot(time_lookback, lookback, color='black', label='Historical Lookback', linewidth=1.8)
     plt.plot(time_horizon, ground_truth, color='black', linestyle=':', label='Ground Truth', linewidth=2.2)
     
-    # 2. Plot Top-5 Candidate Sample Paths
+    #  Plot Top Candidate Sample Paths
     colors = plt.cm.Blues(np.linspace(0.4, 0.8, num_top_paths))
     for i in range(num_top_paths):
         label = "Sampled Trajectories" if i == 0 else None
         plt.plot(time_horizon, top_trajectories[i], color=colors[i], linestyle='--', alpha=0.75, linewidth=1.2, label=label)
         
-    # 3. Plot Mean/Median Trajectory
+    #  Plot Mean/Median Trajectory
     plt.plot(time_horizon, mean_curve, color='tab:red', label='MC Mean Prediction (μ)', linewidth=2.5)
     
-    # 4. Plot Epistemic Uncertainty Ribbon
+    #  Plot Epistemic Uncertainty Ribbon
     plt.fill_between(time_horizon, lower_curve, upper_curve, color='tab:red', alpha=0.20, label='90% MC Confidence Band')
 
     plt.axvline(x=seq_len, color='gray', linestyle='--', alpha=0.7)
-    plt.title(f"TimesNet Monte Carlo Dropout Probabilistic Forecast (Channel {channel_idx})", fontweight='bold')
+    #plt.title(f"TimesNet Monte Carlo Dropout Probabilistic Forecast (Channel {channel_idx})", fontweight='bold')
     plt.xlabel("Time Steps")
     plt.ylabel("Normalized Value")
     plt.legend(loc='upper left', fontsize=9)
