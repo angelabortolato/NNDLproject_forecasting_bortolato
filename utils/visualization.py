@@ -22,7 +22,7 @@ def visualize_raw_datasets(data_dir: str = "./data", save_dir: str = "./plots"):
 
         print(f"--> Electricity raw shape (Time Steps x Channels): {df_elec.shape}")
 
-        fig, axes = plt.subplots(1, 1, figsize=(6, 4))
+        fig, axes = plt.subplots(1, 1, figsize=(6, 3))
 
         # Zoomed-in window (1 week = 168 hours)
         zoomed_hours = 168
@@ -56,7 +56,7 @@ def visualize_raw_datasets(data_dir: str = "./data", save_dir: str = "./plots"):
 
         print(f"--> Exchange Rate raw shape (Time Steps x Channels): {df_exch.shape}")
 
-        plt.figure(figsize=(6, 4))
+        plt.figure(figsize=(6, 3))
         for c in range(min(5, df_exch.shape[1])):
             plt.plot(df_exch.iloc[:, c], label=f"Currency Pair {c}", linewidth=1.2)
 
@@ -89,7 +89,7 @@ def plot_loss_trajectories(all_results, dataset_name="Electricity", save_path=".
     Plots all models' training (solid) and validation (dashed) curves on a single panel.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 3))
     
     
     for (model_name, res) in all_results.items():
@@ -133,7 +133,7 @@ def plot_forecast_comparison(models_dict, test_loader, device, sample_idx=0, cha
     time_lookback = np.arange(seq_len)
     time_horizon = np.arange(seq_len, seq_len + pred_len)
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 3.5))
     
     # Plot historical lookback and actual target sequence
     plt.plot(time_lookback, lookback, color='black', label='Historical Lookback (L=96)', linewidth=1.5)
@@ -504,7 +504,7 @@ def extract_and_plot_fft_periods(model, test_loader, device, top_k=5,
     print("==================================================\n")
 
     # Visualization: FFT Amplitude Spectrum & Periods
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 3))
     
     # Full FFT Spectrum Line
     plt.plot(freq_indices[1:], amplitudes[1:], color='tab:blue', linewidth=1.8, label='FFT Amplitude Spectrum')
@@ -576,7 +576,7 @@ def plot_parametric_gaussian_forecast(model, test_loader, device, sample_idx=0, 
     time_lookback = np.arange(seq_len)
     time_horizon = np.arange(seq_len, seq_len + pred_len)
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 3))
     
     # Ground Truth & History
     plt.plot(time_lookback, lookback, color='black', label='Historical Lookback')
@@ -669,7 +669,7 @@ def plot_mc_dropout_forecast(model, test_loader, device, sample_idx=0, channel_i
     time_lookback = np.arange(seq_len)
     time_horizon = np.arange(seq_len, seq_len + pred_len)
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6, 3))
     
     #  Historical Lookback & Ground Truth
     plt.plot(time_lookback, lookback, color='black', label='Historical Lookback', linewidth=1.8)

@@ -37,10 +37,13 @@ time_series_project/
 │   ├── __init__.py
 │   ├── dlinear.py         # Baseline 1: Channel-wise Linear Mapping
 │   ├── conv1d_baseline.py # Baseline 2: 1D Convolutional Network
+│   ├── lstm_baseline.py   # Baseline 3: LSTM
 │   └── timesnet.py        # TimesNet Architecture 
 ├── utils/
 │   ├── dataset.py         # PyTorch Dataset and DataLoader windowing
 │   └── visualization.py   # Plotting functions for report figures
+├── plots/...              # Saved output plots
+├── checkpoints/...        # Saved model weights
 ├── train.py               # Training and validation loop script
 ├── requirements.txt       # Dependencies list
 └── README.md              # Project documentation
